@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@import "./components.css";
+@import "./utilities.css";
+
+@theme {
+  --font-outfit: 'Outfit', sans-serif;
+}
+
+input, button, textarea, select {
+  font-family: var(--font-outfit);
+}
+
+body {
+  font-family: var(--font-outfit);
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}

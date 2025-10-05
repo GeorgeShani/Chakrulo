@@ -1,0 +1,106 @@
+/* ---------- Base layout background ---------- */
+.layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.layout > * {
+  position: relative;
+  z-index: 1; /* keep content above */
+}
+
+/* ---------- Variants ---------- */
+.auth-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    url('/images/illustrations/background.jpg');
+}
+
+.welcome-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    url('/images/illustrations/home-bg.jpg');
+}
+
+.profile-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    url('/images/illustrations/profile-bg.png');
+}
+
+.readiness-score-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    url('/images/illustrations/readiness-score-bg.jpg');
+}
+
+.questionnaire-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    url('/images/illustrations/questionnaire-bg.jpg');
+}
+
+.dashboard-home-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    url('/images/illustrations/dashboard-bg.jpg');
+}
+
+.nasa-community-layout::before {
+  background-image:
+    linear-gradient(rgba(205, 193, 224, 0.6), rgba(205, 193, 224, 0.8)),
+    url('/images/illustrations/nasa-community.jpg');
+}
+
+/* ---------- Input icon ---------- */
+.input-icon {
+  background: url('/images/logos/nasa.svg') no-repeat right 16px center;
+  background-size: 30px 30px;
+}
+
+/* ---------- Scroll bar ---------- */
+.scroll-bar::-webkit-scrollbar {
+  width: 0.25rem;
+}
+
+.scroll-bar::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.scroll-bar::-webkit-scrollbar-button:start:decrement,
+.scroll-bar::-webkit-scrollbar-button:end:increment {
+  display: none;
+}
+
+.scroll-bar::-webkit-scrollbar-track {
+  background: #EBE9E8;
+  border-radius: 0.5rem;
+  padding: 0.063rem;
+}
+
+.scroll-bar::-webkit-scrollbar-thumb {
+  background: #4B376B;
+  border-radius: 0.5rem;
+  pointer-events: none;
+}
+
+.scroll-bar::-webkit-scrollbar-thumb:hover {
+  background: #4B376B;
+}
+
+.scroll-bar-hide {
+  overflow: auto; /* or scroll */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.scroll-bar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
