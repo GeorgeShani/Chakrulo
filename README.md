@@ -318,7 +318,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **NASA Space Apps Challenge**: [2025 Challenge](https://www.spaceappschallenge.org/2025/challenges/build-a-space-biology-knowledge-engine/)
 - **Live Demo**: [Coming Soon]
-- **Documentation**: [Full Documentation](docs/)
 
 ---
 
