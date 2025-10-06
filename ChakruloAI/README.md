@@ -67,8 +67,8 @@ ollama list
 ### Step 2: Clone Repository
 
 ```bash
-git clone https://github.com/GeorgeShani/ChakruloAI.git
-cd chatbot
+git clone https://github.com/GeorgeShani/Chakrulo.git
+cd Chakrulo/ChakruloAI
 ```
 
 ### Step 3: Install Python Dependencies
