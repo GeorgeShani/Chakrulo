@@ -79,7 +79,7 @@ pip install langchain langchain-community langchain-ollama
 pip install chromadb
 pip install sentence-transformers
 pip install unstructured
-pip install "unstructured[html]"  # For HTML parsing
+pip install torch
 ```
 
 Or use requirements file:
