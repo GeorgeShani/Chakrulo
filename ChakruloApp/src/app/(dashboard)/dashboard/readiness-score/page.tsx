@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 export default function ReadinessScorePage() {
-  const progress: number = 85; 
+  const progress: number = 73; 
   
   return (
     <section className="w-full h-full flex flex-col items-center justify-center pt-9 gap-4 readiness-score-layout layout">
@@ -31,7 +31,7 @@ export default function ReadinessScorePage() {
           {/* Physical Score */}
           <div className="w-full max-w-xl flex flex-col items-center justify-center gap-3 text-center">
             <h2 className="text-[#1A123B] text-2xl">Physical Score</h2>
-            <p className="text-[#1A123B] text-7xl">89</p>
+            <p className="text-[#1A123B] text-7xl">60</p>
             <div>
               <h3 className="font-semibold mb-2">
                 Recommendations from Chakrulo AI
@@ -55,7 +55,7 @@ export default function ReadinessScorePage() {
           {/* Mental Score */}
           <div className="w-full max-w-xl flex flex-col items-center justify-center gap-3 text-center">
             <h2 className="text-[#1A123B] text-2xl">Mental Score</h2>
-            <p className="text-[#1A123B] text-7xl">81</p>
+            <p className="text-[#1A123B] text-7xl">86</p>
             <div>
               <h3 className="font-semibold mb-2">
                 Recommendations from Chakrulo AI

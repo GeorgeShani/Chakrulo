@@ -7,11 +7,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("Moon");
 
   const tabs = ["Moon", "Mars", "Microgravity", "Space Radiation"];
-  const progress: number = 85;
+  const progress: number = 73;
 
   const exploreMore = () => { 
     window.open(
-      "https://www.nasa.gov/mission/station/research-explorer/investigation",
+      "https://www.nasa.gov/mission/station/research-explorer/investigation/?fbclid=IwY2xjawNPD0RleHRuA2FlbQIxMQABHlFKPLkbWOdMC7CRmdEzFbQ6B2L-HRAz-eCs9wkRaWqFpndk4TZW19ZWcOuC_aem_MiuWcUXU54MMKRMTnX5Fvg#id=8413",
       "_blank"
     );
   };
