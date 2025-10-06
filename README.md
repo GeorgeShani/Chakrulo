@@ -8,7 +8,7 @@ Chakrulo is a comprehensive space biology knowledge platform that combines AI-po
 
 Chakrulo consists of two main components:
 
-1. **ChakruloFrontend** - A modern Next.js web application with AI-powered health assessment and space biology education
+1. **ChakruloApp** - A modern Next.js web application with AI-powered health assessment and space biology education
 2. **ChakruloAI** - A fully offline RAG-powered research assistant with 33+ space medicine research papers
 
 ### 🎯 Mission Statement
@@ -74,7 +74,7 @@ To democratize access to space biology knowledge and provide evidence-based heal
 
 ## 🛠️ Technology Stack
 
-### Frontend (ChakruloFrontend)
+### Frontend Technologies
 
 - **Framework**: Next.js 15 with TypeScript
 - **Styling**: Tailwind CSS 4.0
@@ -83,21 +83,15 @@ To democratize access to space biology knowledge and provide evidence-based heal
 - **Database**: Supabase
 - **State Management**: React Query + Redux Toolkit
 - **UI Components**: Custom components with Lucide React icons
-
-### AI Backend (ChakruloAI)
-
-- **Framework**: Streamlit
-- **RAG Pipeline**: LangChain
-- **LLM**: Ollama (llama3.2)
-- **Vector Database**: ChromaDB
-- **Embeddings**: HuggingFace Transformers (all-MiniLM-L6-v2)
-- **Document Processing**: Unstructured
+- **Form Handling**: React Hook Form with Zod validation
+- **File Upload**: Supabase Storage
+- **Email Service**: Resend
 
 ## 📁 Project Structure
 
 ```
 Chakrulo/
-├── ChakruloFrontend/           # Next.js Web Application
+├── ChakruloApp/           # Next.js Web Application
 │   ├── src/
 │   │   ├── ai/                 # AI integration layer
 │   │   ├── app/                # Next.js app router
@@ -129,7 +123,7 @@ Chakrulo/
 ```bash
 # Clone the repository
 git clone https://github.com/GeorgeShani/Chakrulo.git
-cd Chakrulo/ChakruloFrontend
+cd Chakrulo/ChakruloApp
 
 # Install dependencies
 npm install
@@ -297,10 +291,6 @@ We welcome contributions from the space biology and health technology communitie
 - Documentation enhancements
 - Multi-language support
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
 
 - **NASA Space Apps Challenge** for the inspiration and platform
@@ -310,7 +300,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **GitHub Issues**: [Create an issue](https://github.com/your-username/Chakrulo/issues)
+- **GitHub Issues**: [Create an issue](https://github.com/GeorgeShani/Chakrulo/issues)
 - **Documentation**: See individual component READMEs
 - **Community**: Join our Discord server
 
