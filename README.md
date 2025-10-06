@@ -19,14 +19,14 @@ To democratize access to space biology knowledge and provide evidence-based heal
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Chakrulo Ecosystem                      │
+│                    Chakrulo Ecosystem                       │
 ├─────────────────────────────────────────────────────────────┤
-│  Frontend (Next.js)           │  AI Backend (Python)       │
-│  ├── User Authentication      │  ├── RAG Pipeline         │
-│  ├── Health Questionnaire     │  ├── Vector Database       │
-│  ├── AI-Powered Dashboard     │  ├── Local LLM (Ollama)    │
-│  ├── Readiness Scoring        │  └── Document Processing   │
-│  └── Community Features    │                             │
+│  Frontend (Next.js)           │  AI Backend (Python)        │
+│  ├── User Authentication      │  ├── RAG Pipeline           │
+│  ├── Health Questionnaire     │  ├── Vector Database        │
+│  ├── AI-Powered Dashboard     │  ├── Local LLM (Ollama)     │
+│  ├── Readiness Scoring        │  └── Document Processing    │
+│  └── Community Features       │                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
