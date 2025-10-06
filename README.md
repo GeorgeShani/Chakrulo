@@ -32,7 +32,7 @@ To democratize access to space biology knowledge and provide evidence-based heal
 
 ## 🚀 Key Features
 
-### Frontend Application (ChakruloFrontend)
+### Frontend Application (ChakruloApp)
 
 #### 🤖 AI-Powered Health Assessment
 
