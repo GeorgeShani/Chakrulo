@@ -99,18 +99,13 @@ export default function SignUpPage() {
       await setActive({ session: result.createdSessionId });
 
       // Create user in DB
-      const user = await createUserInDatabase({
+      await createUserInDatabase({
         clerk_id: result.createdUserId!,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim(),
       });
-
-      if (user) {
-        // Create AI conversation
-        await createAIConversation(user.id);
-      }
-
+      
       router.push("/dashboard/profile");
     } catch (err: any) {
       handleSignUpError(err);
@@ -141,22 +136,6 @@ export default function SignUpPage() {
     } catch (err) {
       console.error("Error creating user in database:", err);
       return null;
-    }
-  };
-
-  const createAIConversation = async (userId: string) => {
-    try {
-      const res = await fetch("/api/conversations/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "ai", user_id: userId }),
-      });
-
-      if (!res.ok) {
-        console.error("Failed to create AI conversation");
-      }
-    } catch (err) {
-      console.error("Error creating AI conversation:", err);
     }
   };
 
