@@ -1,5 +1,5 @@
 "use server";
-import { getGeminiModel } from "../models/gemini.model";
+import { getGeminiModel } from "@/ai/models/gemini.model";
 
 export async function generateText(prompt: string, modelName?: string) {
   const model = getGeminiModel(modelName);
