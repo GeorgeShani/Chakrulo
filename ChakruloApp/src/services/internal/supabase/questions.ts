@@ -21,10 +21,8 @@ export async function getQuestionsByType(type: QuestionType) {
       )
     `)
     .eq("question_type", type)
-    .order("question_number")
-    .order("option_value", {
-      ascending: true,
-      foreignTable: "response_options",
+    .order("question_number", {
+      ascending: true
     });
 
   if (error) {
@@ -32,5 +30,12 @@ export async function getQuestionsByType(type: QuestionType) {
     return null;
   }
 
-  return data as Question[];
+  const sortedData = data?.map((q) => ({
+    ...q,
+    response_options: q.response_options.sort(
+      (a, b) => a.option_value - b.option_value
+    ),
+  }));
+
+  return sortedData as Question[];
 }
