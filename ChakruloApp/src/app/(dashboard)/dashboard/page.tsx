@@ -17,15 +17,15 @@ export default function Dashboard() {
   };
 
   return (
-    <section className="w-full min-h-screen flex items-start justify-center pt-32 dashboard-home-layout layout">
-      <div className="w-full max-w-7xl h-full max-h-[84%] grid grid-cols-[1fr_auto] gap-6">
+    <section className="w-full h-full flex items-center pt-16 justify-center dashboard-home-layout layout">
+      <div className="w-full max-w-7xl h-[82dvh] grid grid-cols-[1fr_auto] gap-6">
         <div className="w-full h-full bg-[#d9d9d92b] rounded-4xl p-6 grid grid-cols-[auto_1fr] gap-4">
-          <div className="w-[200px] h-full">
+          <div className="w-[200px] h-full flex items-center justify-center">
             <Image
               src="/images/illustrations/skeleton.png"
               alt="Skeleton"
               width={200}
-              height={800}
+              height={1000}
             />
           </div>
           <div className="w-full h-full grid grid-rows-[auto_1fr_auto] gap-4">
