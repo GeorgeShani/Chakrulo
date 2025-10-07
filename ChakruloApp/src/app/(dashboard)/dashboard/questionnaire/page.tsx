@@ -4,46 +4,87 @@ import { useState, useEffect, useRef } from "react";
 
 type TabType = "physical" | "mental";
 
+interface QuestionnaireResponse {
+  questionId: string;
+  selectedOptionId: string;
+  selectedOptionValue: number;
+  uploadedFile?: {
+    name: string;
+    size: number;
+    type: string;
+  };
+}
+
+interface SavedQuestionnaire {
+  timestamp: string;
+  physicalResponses: QuestionnaireResponse[];
+  mentalResponses: QuestionnaireResponse[];
+  uploadedFiles: { [key: string]: File };
+}
+
 export default function QuestionnairePage() {
   const [activeTab, setActiveTab] = useState<TabType>("physical");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [physicalQuestions, setPhysicalQuestions] = useState<Question[]>([]);
+  const [mentalQuestions, setMentalQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
-  const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean; }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>(
+    {}
+  );
+  const [expandedQuestions, setExpandedQuestions] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [importantNotePopup, setImportantNotePopup] = useState<boolean>(true);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+
+  // Store responses for each tab
+  const [physicalResponses, setPhysicalResponses] = useState<
+    QuestionnaireResponse[]
+  >([]);
+  const [mentalResponses, setMentalResponses] = useState<
+    QuestionnaireResponse[]
+  >([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [key: string]: string;
+  }>({});
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [toggleLearnMore, setToggleLearnMore] = useState(false);
 
   const toggleLearnMoreVoid = () => {
-    setToggleLearnMore(prev => !prev);
+    setToggleLearnMore((prev) => !prev);
   };
 
   useEffect(() => {
     if (toggleLearnMore && containerRef.current) {
       containerRef.current.scrollTo({
         top: containerRef.current.scrollHeight,
-        behavior: "smooth", // optional for smooth scrolling
+        behavior: "smooth",
       });
     }
   }, [toggleLearnMore]);
 
-
+  // Fetch both physical and mental questions on mount
   useEffect(() => {
-    const getQuestions = async () => {
+    const getAllQuestions = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`/api/questions/${activeTab}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+        const [physicalRes, mentalRes] = await Promise.all([
+          fetch("/api/questions/physical"),
+          fetch("/api/questions/mental"),
+        ]);
+
+        if (!physicalRes.ok || !mentalRes.ok) {
+          throw new Error("Failed to fetch questions");
         }
 
-        const data: Question[] = await response.json();
-        setQuestions(data);
+        const physicalData: Question[] = await physicalRes.json();
+        const mentalData: Question[] = await mentalRes.json();
+
+        setPhysicalQuestions(physicalData);
+        setMentalQuestions(mentalData);
       } catch (error) {
         console.error("Error fetching questions:", error);
         setError("Failed to load questions. Please try again.");
@@ -52,8 +93,48 @@ export default function QuestionnairePage() {
       }
     };
 
-    getQuestions();
-  }, [activeTab]);
+    getAllQuestions();
+  }, []);
+
+  // Get current questions based on active tab
+  const currentQuestions =
+    activeTab === "physical" ? physicalQuestions : mentalQuestions;
+
+  const handleAnswerChange = (
+    questionId: string,
+    optionId: string,
+    optionValue: number
+  ) => {
+    setSelectedAnswers((prev) => ({
+      ...prev,
+      [questionId]: optionId,
+    }));
+
+    const response: QuestionnaireResponse = {
+      questionId,
+      selectedOptionId: optionId,
+      selectedOptionValue: optionValue,
+      uploadedFile: uploadedFiles[questionId]
+        ? {
+            name: uploadedFiles[questionId].name,
+            size: uploadedFiles[questionId].size,
+            type: uploadedFiles[questionId].type,
+          }
+        : undefined,
+    };
+
+    if (activeTab === "physical") {
+      setPhysicalResponses((prev) => {
+        const filtered = prev.filter((r) => r.questionId !== questionId);
+        return [...filtered, response];
+      });
+    } else {
+      setMentalResponses((prev) => {
+        const filtered = prev.filter((r) => r.questionId !== questionId);
+        return [...filtered, response];
+      });
+    }
+  };
 
   const handleFileUpload = (questionId: string, file: File) => {
     if (file.size > 10 * 1024 * 1024) {
@@ -65,6 +146,34 @@ export default function QuestionnairePage() {
       ...prev,
       [questionId]: file,
     }));
+
+    // Update the response with file info
+    const currentResponses =
+      activeTab === "physical" ? physicalResponses : mentalResponses;
+    const existingResponse = currentResponses.find(
+      (r) => r.questionId === questionId
+    );
+
+    if (existingResponse) {
+      const updatedResponse = {
+        ...existingResponse,
+        uploadedFile: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        },
+      };
+
+      if (activeTab === "physical") {
+        setPhysicalResponses((prev) =>
+          prev.map((r) => (r.questionId === questionId ? updatedResponse : r))
+        );
+      } else {
+        setMentalResponses((prev) =>
+          prev.map((r) => (r.questionId === questionId ? updatedResponse : r))
+        );
+      }
+    }
   };
 
   const handleRemoveFile = (questionId: string) => {
@@ -76,6 +185,22 @@ export default function QuestionnairePage() {
 
     if (fileInputRefs.current[questionId]) {
       fileInputRefs.current[questionId]!.value = "";
+    }
+
+    // Remove file info from response
+    const updateResponses = (responses: QuestionnaireResponse[]) =>
+      responses.map((r) => {
+        if (r.questionId === questionId) {
+          const { uploadedFile, ...rest } = r;
+          return rest;
+        }
+        return r;
+      });
+
+    if (activeTab === "physical") {
+      setPhysicalResponses(updateResponses);
+    } else {
+      setMentalResponses(updateResponses);
     }
   };
 
@@ -94,18 +219,71 @@ export default function QuestionnairePage() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const saveQuestionnaireResults = async () => {};
+  const saveQuestionnaireResults = async () => {
+    const savedData: SavedQuestionnaire = {
+      timestamp: new Date().toISOString(),
+      physicalResponses,
+      mentalResponses,
+      uploadedFiles,
+    };
 
-  const moveToMentalQuestions = async () => {
+    // Log the data to console for now
+    console.log("Saved Questionnaire Data:", savedData);
+    console.log("Physical Responses Count:", physicalResponses.length);
+    console.log("Mental Responses Count:", mentalResponses.length);
+    console.log("Total Uploaded Files:", Object.keys(uploadedFiles).length);
+
+    alert(
+      `Questionnaire saved locally!\n\nPhysical: ${
+        physicalResponses.length
+      } responses\nMental: ${mentalResponses.length} responses\nFiles: ${
+        Object.keys(uploadedFiles).length
+      }\n\nCheck console for details.`
+    );
+  };
+
+  const moveToMentalQuestions = () => {
+    // Simply switch tabs - all data is preserved
+    console.log("Physical Health Responses:", physicalResponses);
     setActiveTab("mental");
   };
 
-  const submitQuestionnaire = async () => { };
+  const submitQuestionnaire = async () => {
+    const totalResponses = physicalResponses.length + mentalResponses.length;
+
+    if (totalResponses === 0) {
+      alert("Please answer at least one question before submitting.");
+      return;
+    }
+
+    const finalData: SavedQuestionnaire = {
+      timestamp: new Date().toISOString(),
+      physicalResponses,
+      mentalResponses,
+      uploadedFiles,
+    };
+
+    // Calculate a simple readiness score (average of all responses)
+    const allValues = [
+      ...physicalResponses.map((r) => r.selectedOptionValue),
+      ...mentalResponses.map((r) => r.selectedOptionValue),
+    ];
+    const averageScore =
+      allValues.reduce((sum, val) => sum + val, 0) / allValues.length;
+    const readinessScore = Math.round(averageScore * 100) / 100;
+
+    console.log("Final Questionnaire Submission:", finalData);
+    console.log("Readiness Score:", readinessScore);
+
+    alert(
+      `Questionnaire submitted!\n\nTotal Responses: ${totalResponses}\nReadiness Score: ${readinessScore}\n\nCheck console for full details.`
+    );
+  };
 
   if (importantNotePopup) {
     return (
       <section className="w-full h-full flex items-center justify-center pt-20 questionnaire-layout layout">
-        <div className="bg-[#e0dae990] w-full max-w-5xl h-full max-h-[94%] rounded-4xl p-10 grid grid-rows-[1fr_auto] gap-6">
+        <div className="bg-[#e0dae990] w-full max-w-5xl h-full max-h-[80dvh] rounded-4xl p-10 grid grid-rows-[1fr_auto] gap-6">
           <div className="w-full h-full overflow-hidden flex flex-col items-center justify-center text-center">
             <div
               ref={containerRef}
@@ -119,7 +297,7 @@ export default function QuestionnairePage() {
                 the NASA Space Biology Challenge.
               </p>
               <p className="text-[#342748] text-lg">
-                It’s based on NASA’s astronaut health and bioscience studies,
+                It's based on NASA's astronaut health and bioscience studies,
                 which explore how spaceflight affects the brain, body, and
                 overall well-being.
               </p>
@@ -214,7 +392,7 @@ export default function QuestionnairePage() {
 
   return (
     <section className="w-full h-full flex items-center justify-center pt-20 questionnaire-layout layout">
-      <div className="bg-[rgba(158,154,161,0.54)] w-full max-w-6xl h-[590px] rounded-3xl py-6 px-8 grid grid-rows-[auto_1fr_auto] gap-4">
+      <div className="bg-[rgba(158,154,161,0.54)] w-full max-w-6xl h-[80dvh] rounded-3xl py-6 px-8 grid grid-rows-[auto_1fr_auto] gap-4">
         <div className="w-full grid grid-cols-2 bg-[rgba(21,3,53,0.26)] rounded-2xl px-6 py-3">
           <button
             onClick={() => setActiveTab("physical")}
@@ -269,13 +447,13 @@ export default function QuestionnairePage() {
               </svg>
               <p className="text-[#290D55] text-lg text-center">{error}</p>
               <button
-                onClick={() => setActiveTab(activeTab)}
+                onClick={() => window.location.reload()}
                 className="bg-[#290D55] hover:bg-[#3e2e58] transition-all duration-300 ease-in-out rounded-2xl text-white text-base py-2 px-6"
               >
                 Retry
               </button>
             </div>
-          ) : questions.length === 0 ? (
+          ) : currentQuestions.length === 0 ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-4">
               <p className="text-[#290D55] text-lg text-center">
                 No questions available for this category.
@@ -284,7 +462,7 @@ export default function QuestionnairePage() {
           ) : (
             <div className="w-full h-full overflow-y-auto scroll-bar">
               <div className="flex flex-col gap-4">
-                {questions.map((question) => (
+                {currentQuestions.map((question) => (
                   <div
                     key={question.id}
                     className="w-[98%] bg-[rgba(217,217,217,0.67)] rounded-2xl px-6 py-3 flex flex-col gap-4"
@@ -302,6 +480,14 @@ export default function QuestionnairePage() {
                             type="radio"
                             name={question.id}
                             value={option.id}
+                            checked={selectedAnswers[question.id] === option.id}
+                            onChange={() =>
+                              handleAnswerChange(
+                                question.id,
+                                option.id,
+                                option.option_value
+                              )
+                            }
                             className="cursor-pointer"
                           />
                           {option.option_text}
@@ -478,7 +664,10 @@ export default function QuestionnairePage() {
         </div>
         <div className="w-full flex items-center justify-between">
           <button
-            disabled={isLoading || questions.length === 0}
+            disabled={
+              isLoading ||
+              (physicalQuestions.length === 0 && mentalQuestions.length === 0)
+            }
             onClick={saveQuestionnaireResults}
             className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -495,7 +684,10 @@ export default function QuestionnairePage() {
           )}
           {activeTab === "mental" && (
             <button
-              disabled={isLoading || questions.length === 0}
+              disabled={
+                isLoading ||
+                (physicalQuestions.length === 0 && mentalQuestions.length === 0)
+              }
               onClick={submitQuestionnaire}
               className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
             >
