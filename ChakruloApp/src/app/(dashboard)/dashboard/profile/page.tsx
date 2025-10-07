@@ -410,15 +410,15 @@ export default function ProfilePage() {
         <div className="grid grid-cols-[1fr_auto] gap-24">
           <div className="flex flex-col items-center gap-4">
             <div className="w-56 h-56 rounded-3xl bg-[#D9D9D9] overflow-hidden">
-              {formData.profileImageUrl ? (
+              {formData.profileImagePreview ? (
                 <img
-                  src={formData.profileImageUrl}
-                  alt="Profile Picture"
+                  src={formData.profileImagePreview}
+                  alt="Profile Picture Preview"
                   className="w-full h-full object-cover"
                 />
-              ) : profileImagePreview ? (
+              ) : formData.profileImageUrl ? (
                 <img
-                  src={profileImagePreview}
+                  src={formData.profileImageUrl}
                   alt="Profile Picture"
                   className="w-full h-full object-cover"
                 />
