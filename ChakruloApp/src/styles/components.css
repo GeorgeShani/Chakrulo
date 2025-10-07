@@ -35,7 +35,7 @@
 
 .readiness-score-layout::before {
   background-image:
-    linear-gradient(rgba(205, 193, 224, 0.4), rgba(205, 193, 224, 0.4)),
+    linear-gradient(rgba(205, 193, 224, 0.6), rgba(205, 193, 224, 0.6)),
     url('/images/illustrations/readiness-score-bg.jpg');
 }
 
