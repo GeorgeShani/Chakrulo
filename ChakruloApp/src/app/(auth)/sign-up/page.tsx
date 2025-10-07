@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSignUp, useUser } from "@clerk/nextjs";
+import { useSignIn, useSignUp, useUser } from "@clerk/nextjs";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -28,6 +28,7 @@ const OAUTH_STRATEGIES = {
 };
 
 export default function SignUpPage() {
+  const { signIn } = useSignIn();
   const { signUp, isLoaded, setActive } = useSignUp();
   const { isSignedIn, isLoaded: userLoaded } = useUser();
 
@@ -157,10 +158,10 @@ export default function SignUpPage() {
   const handleOAuthSignUp = async (
     strategy: (typeof OAUTH_STRATEGIES)[keyof typeof OAUTH_STRATEGIES]
   ) => {
-    if (!isLoaded || !signUp) return;
+    if (!isLoaded || !signIn) return;
 
     try {
-      await signUp.authenticateWithRedirect({
+      await signIn.authenticateWithRedirect({
         strategy,
         redirectUrl: `${window.location.origin}/sso-callback`,
         redirectUrlComplete: "/dashboard/profile",
