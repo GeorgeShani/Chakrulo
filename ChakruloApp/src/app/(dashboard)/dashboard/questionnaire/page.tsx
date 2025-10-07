@@ -283,7 +283,7 @@ export default function QuestionnairePage() {
   if (importantNotePopup) {
     return (
       <section className="w-full h-full flex items-center justify-center pt-20 questionnaire-layout layout">
-        <div className="bg-[#e0dae990] w-full max-w-5xl h-full max-h-[80dvh] rounded-4xl p-10 grid grid-rows-[1fr_auto] gap-6">
+        <div className="bg-[#e0dae990] w-full max-w-5xl h-full max-h-[80dvh] rounded-4xl p-8 grid grid-rows-[1fr_auto] gap-6">
           <div className="w-full h-full overflow-hidden flex flex-col items-center justify-center text-center">
             <div
               ref={containerRef}
