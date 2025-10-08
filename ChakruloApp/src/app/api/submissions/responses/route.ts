@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { CreateResponseRequest } from "@/types/supabase/responses";
-import { createResponse } from "@/services/internal";
+import { upsertResponse } from "@/services/internal";
 
 export async function POST(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await createResponse(body);
+    const response = await upsertResponse(body);
     return NextResponse.json({ response }, { status: 201 });
   } catch (err: any) {
     console.error("Error creating response:", err);

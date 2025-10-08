@@ -3,7 +3,7 @@ import { CreateResponseRequest } from "@/types/supabase/responses";
 
 const supabase = createSupabaseClient();
 
-export async function createResponse(
+export async function upsertResponse(
   request: CreateResponseRequest
 ): Promise<Response | null> {
   const { data: submission, error: submissionError } = await supabase
@@ -23,14 +23,17 @@ export async function createResponse(
 
   const { data, error } = await supabase
     .from("responses")
-    .insert([
+    .upsert(
       {
         submission_id: request.submission_id,
         question_id: request.question_id,
         response_option_id: request.response_option_id,
         uploaded_file_url: request.uploaded_file_url ?? null,
       },
-    ])
+      {
+        onConflict: "submission_id,question_id",
+      }
+    )
     .select()
     .single();
 
