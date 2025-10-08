@@ -1,5 +1,9 @@
 import { createSupabaseClient } from "@/lib/database/connection";
-import { CreateResponseRequest } from "@/types/supabase/responses";
+import {
+  CreateResponseRequest,
+  UploadResponseFileRequest,
+} from "@/types/supabase/responses";
+import { uploadFile } from "./storage";
 
 const supabase = createSupabaseClient();
 
@@ -42,4 +46,31 @@ export async function upsertResponse(
   }
 
   return data as Response;
+}
+
+export async function uploadResponseFile(
+  request: UploadResponseFileRequest
+): Promise<string> {
+  if (!request.uploaded_file) {
+    throw new Error("No file provided for upload");
+  }
+
+  const originalName = request.uploaded_file.name;
+  const ext = originalName.split(".").pop();
+  const timestamp = new Date().toISOString();
+  const safeName = `${timestamp}.${ext}`;
+  const path = `advanced_questions_files/${request.submission_id}/${request.question_id}/${request.response_option_id}/${safeName}`;
+
+  const uploadedUrl = await uploadFile(
+    "chakrulo-storage-bucket",
+    path,
+    request.uploaded_file,
+    "3600"
+  );
+
+  if (!uploadedUrl) {
+    throw new Error("Failed to upload file to storage");
+  }
+
+  return uploadedUrl;
 }

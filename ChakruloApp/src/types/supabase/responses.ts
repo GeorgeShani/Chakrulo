@@ -15,3 +15,10 @@ export interface CreateResponseRequest {
   response_option_id: UUID;
   uploaded_file_url?: string | null;
 }
+
+export interface UploadResponseFileRequest {
+  submission_id: UUID;
+  question_id: UUID;
+  response_option_id: UUID;
+  uploaded_file: File;
+}
