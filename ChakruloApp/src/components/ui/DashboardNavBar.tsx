@@ -175,6 +175,13 @@ export default function DashboardNavBar() {
             NASA Community
           </Link>
           <Link
+            href="/dashboard/publications"
+            onClick={closeMenu}
+            className="text-lg sm:text-xl text-[#E0DAE9] hover:text-white transition-all duration-200 ease-in-out py-2 border-b border-[#E0DAE9]/30"
+          >
+            Publications
+          </Link>
+          <Link
             href="/dashboard/profile"
             onClick={closeMenu}
             className="text-lg sm:text-xl text-[#E0DAE9] hover:text-white transition-all duration-200 ease-in-out py-2 border-b border-[#E0DAE9]/30"
