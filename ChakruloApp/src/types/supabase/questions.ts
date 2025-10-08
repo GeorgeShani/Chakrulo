@@ -18,15 +18,8 @@ export interface Question {
   response_options: ResponseOption[];
 }
 
-interface ResponseOption { 
+export interface ResponseOption { 
   id: UUID;
   option_text: string;
   option_value: number;
-}
-
-export interface CreateResponseRequest {
-  submission_id: UUID;
-  question_id: UUID;
-  response_option_id: UUID;
-  uploaded_file_url?: string | null;
 }
