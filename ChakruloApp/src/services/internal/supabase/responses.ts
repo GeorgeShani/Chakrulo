@@ -55,6 +55,11 @@ export async function uploadResponseFile(
     throw new Error("No file provided for upload");
   }
 
+  const MAX_SIZE = 10 * 1024 * 1024;
+  if (request.uploaded_file.size > MAX_SIZE) {
+    throw new Error("File size exceeds 10 MB limit");
+  }
+
   const originalName = request.uploaded_file.name;
   const ext = originalName.split(".").pop();
   const timestamp = new Date().toISOString();
