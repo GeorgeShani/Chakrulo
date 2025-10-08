@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const response = await upsertResponse(body);
-    return NextResponse.json({ response }, { status: 201 });
+    return NextResponse.json(response, { status: 201 });
   } catch (err: any) {
     console.error("Error creating response:", err);
     return NextResponse.json({ error: err.message }, { status: 400 });
