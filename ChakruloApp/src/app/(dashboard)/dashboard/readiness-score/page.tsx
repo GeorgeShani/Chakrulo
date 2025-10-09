@@ -4,11 +4,11 @@ export default function ReadinessScorePage() {
   const progress: number = 73; 
   
   return (
-    <section className="w-full h-full flex flex-col items-center justify-center pt-9 gap-4 readiness-score-layout layout">
+    <section className="w-full h-full flex flex-col items-center justify-center pt-9 gap-8 readiness-score-layout layout">
       <div className="w-full flex flex-col items-center justify-center gap-4">
         <h2 className="text-[#201161] text-5xl">Overall Readiness Score</h2>
         <p className="text-[#201161] text-3xl">{progress}/100</p>
-        <div className="w-full max-w-6xl h-[60px] p-2 bg-white border-[6px] border-[#290D55] rounded-4xl relative">
+        <div className="w-full max-w-6xl h-[56px] p-2 bg-white border-[6px] border-[#290D55] rounded-4xl relative">
           <div
             className="h-full bg-[#59427E] rounded-2xl"
             style={{ width: `${progress}%` }}
