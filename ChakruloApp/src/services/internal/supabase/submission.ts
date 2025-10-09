@@ -36,22 +36,56 @@ export async function getLatestSubmission(
   try {
     const { data, error } = await supabase
       .from("submissions")
-      .select("*")
+      .select(`
+        id,
+        user_id,
+        started_at,
+        completed_at,
+        status,
+        physical_health_score,
+        mental_health_score,
+        overall_readiness_score,
+        physical_health_recommendations,
+        mental_health_recommendations,
+        responses:responses (
+          id,
+          question_id,
+          response_option_id,
+          uploaded_file_url
+        )
+      `)
       .eq("user_id", userId)
-      .order("started_at", {
-        ascending: false,
-      })
+      .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching submission:", error);
+      console.error("Error fetching latest submission:", error);
       return null;
     }
 
-    return data as Submission;
+    if (!data) {
+      return null;
+    }
+
+    const submission: Submission = {
+      ...data,
+      physical_health_recommendations: Array.isArray(
+        data.physical_health_recommendations
+      )
+        ? data.physical_health_recommendations
+        : JSON.parse(data.physical_health_recommendations || "[]"),
+      mental_health_recommendations: Array.isArray(
+        data.mental_health_recommendations
+      )
+        ? data.mental_health_recommendations
+        : JSON.parse(data.mental_health_recommendations || "[]"),
+      responses: data.responses || [],
+    };
+
+    return submission;
   } catch (error) {
-    console.error("Exception fetching submission:", error);
+    console.error("Exception fetching latest submission:", error);
     return null;
   }
 }
@@ -79,27 +113,68 @@ export async function updateLatestSubmission(
       throw new Error("No active submission found for this user.");
     }
 
-    const { data, error } = await supabase
+    const { error: updateError } = await supabase
       .from("submissions")
       .update({ ...request })
-      .eq("id", latest.id)
-      .select()
-      .single();
+      .eq("id", latest.id);
 
-    if (error) {
-      throw new Error(`Error updating submission: ${error.message}`);
+    if (updateError) {
+      throw new Error(`Error updating submission: ${updateError.message}`);
+    }
+
+    const { data, error: fetchUpdatedError } = await supabase
+      .from("submissions")
+      .select(`
+        id,
+        user_id,
+        started_at,
+        completed_at,
+        status,
+        physical_health_score,
+        mental_health_score,
+        overall_readiness_score,
+        physical_health_recommendations,
+        mental_health_recommendations,
+        responses:responses (
+          id,
+          question_id,
+          response_option_id,
+          uploaded_file_url
+        )
+      `)
+      .eq("id", latest.id)
+      .maybeSingle();
+
+    if (fetchUpdatedError) {
+      throw new Error(`Error fetching updated submission: ${fetchUpdatedError.message}`);
     }
 
     if (!data) {
-      throw new Error("Update failed — no submission returned.");
+      throw new Error("Updated submission not found.");
     }
 
-    return data as Submission;
+    const submission: Submission = {
+      ...data,
+      physical_health_recommendations: Array.isArray(
+        data.physical_health_recommendations
+      )
+        ? data.physical_health_recommendations
+        : JSON.parse(data.physical_health_recommendations || "[]"),
+      mental_health_recommendations: Array.isArray(
+        data.mental_health_recommendations
+      )
+        ? data.mental_health_recommendations
+        : JSON.parse(data.mental_health_recommendations || "[]"),
+      responses: data.responses || [],
+    };
+
+    return submission;
   } catch (error) {
     console.error("updateLatestSubmission Exception:", error);
     throw error;
   }
 }
+
 
 
 

@@ -25,4 +25,12 @@ export interface Submission {
   overall_readiness_score: number; // %
   physical_health_recommendations: string[];
   mental_health_recommendations: string[];
+  responses: Response[];
+}
+
+export interface Response {
+  id: UUID;
+  question_id: UUID;
+  response_option_id: UUID;
+  uploaded_file_url: string | null;
 }
