@@ -49,9 +49,18 @@ export async function getLatestSubmission(
         mental_health_recommendations,
         responses:responses (
           id,
-          question_id,
-          response_option_id,
-          uploaded_file_url
+          uploaded_file_url,
+          question:questions (
+            id,
+            question_type,
+            domain,
+            question_text
+          ),
+          response_option:response_options (
+            id,
+            option_text,
+            option_value
+          )
         )
       `)
       .eq("user_id", userId)
@@ -80,7 +89,17 @@ export async function getLatestSubmission(
       )
         ? data.mental_health_recommendations
         : JSON.parse(data.mental_health_recommendations || "[]"),
-      responses: data.responses || [],
+      responses: (data.responses || []).map((r: any) => ({
+        id: r.id,
+        question_id: r.question?.id ?? null,
+        response_option_id: r.response_option?.id ?? null,
+        question_type: r.question?.question_type ?? null,
+        question_domain: r.question?.domain ?? null,
+        question_text: r.question?.question_text ?? null,
+        response_option_text: r.response_option?.option_text ?? null,
+        response_option_value: r.response_option?.option_value ?? null,
+        uploaded_file_url: r.uploaded_file_url ?? null,
+      })),
     };
 
     return submission;
@@ -137,9 +156,18 @@ export async function updateLatestSubmission(
         mental_health_recommendations,
         responses:responses (
           id,
-          question_id,
-          response_option_id,
-          uploaded_file_url
+          uploaded_file_url,
+          question:questions (
+            id,
+            question_type,
+            domain,
+            question_text
+          ),
+          response_option:response_options (
+            id,
+            option_text,
+            option_value
+          )
         )
       `)
       .eq("id", latest.id)
@@ -165,7 +193,17 @@ export async function updateLatestSubmission(
       )
         ? data.mental_health_recommendations
         : JSON.parse(data.mental_health_recommendations || "[]"),
-      responses: data.responses || [],
+      responses: (data.responses || []).map((r: any) => ({
+        id: r.id,
+        question_id: r.question?.id ?? null,
+        response_option_id: r.response_option?.id ?? null,
+        question_type: r.question?.question_type ?? null,
+        question_domain: r.question?.domain ?? null,
+        question_text: r.question?.question_text ?? null,
+        response_option_text: r.response_option?.option_text ?? null,
+        response_option_value: r.response_option?.option_value ?? null,
+        uploaded_file_url: r.uploaded_file_url ?? null,
+      })),
     };
 
     return submission;

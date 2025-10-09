@@ -1,4 +1,5 @@
 import { UUID } from "crypto";
+import { QuestionType } from "./questions";
 
 export interface CreateSubmissionRequest {
   user_id: UUID;
@@ -32,5 +33,10 @@ export interface Response {
   id: UUID;
   question_id: UUID;
   response_option_id: UUID;
+  question_type: QuestionType;
+  question_domain: string;
+  question_text: string;
+  response_option_text: string;
+  response_option_value: string;
   uploaded_file_url: string | null;
 }
