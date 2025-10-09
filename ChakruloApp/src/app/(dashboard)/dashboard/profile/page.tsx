@@ -323,7 +323,7 @@ export default function ProfilePage() {
     setIsSaving(true);
 
     try {
-      let profileImageUrl = formData.profileImagePreview;
+      let profileImageUrl = formData.profileImageUrl;
 
       if (formData.profileImageFile) {
         // Upload new profile image if selected
