@@ -1,6 +1,9 @@
 "use client";
-import { Question } from "@/types/supabase/questions";
 import { useState, useEffect, useRef } from "react";
+import { Question } from "@/types/supabase/questions";
+import { Submission } from "@/types/supabase/submission";
+import { User } from "@/types/supabase/user";
+import { useAuth } from "@clerk/nextjs";
 
 type TabType = "physical" | "mental";
 
@@ -28,32 +31,56 @@ export default function QuestionnairePage() {
   const [mentalQuestions, setMentalQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>(
-    {}
-  );
-  const [expandedQuestions, setExpandedQuestions] = useState<{
-    [key: string]: boolean;
-  }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
+  const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean; }>({});
   const [importantNotePopup, setImportantNotePopup] = useState<boolean>(true);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+  const [submission, setSubmission] = useState<Submission | null>(null);
+  const [userId, setUserId] = useState<string>("");
+  const { userId: clerkId } = useAuth();
 
   // Store responses for each tab
-  const [physicalResponses, setPhysicalResponses] = useState<
-    QuestionnaireResponse[]
-  >([]);
-  const [mentalResponses, setMentalResponses] = useState<
-    QuestionnaireResponse[]
-  >([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<{
-    [key: string]: string;
-  }>({});
+  const [physicalResponses, setPhysicalResponses] = useState<QuestionnaireResponse[]>([]);
+  const [mentalResponses, setMentalResponses] = useState<QuestionnaireResponse[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string; }>({});
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
   const [toggleLearnMore, setToggleLearnMore] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const toggleLearnMoreVoid = () => {
     setToggleLearnMore((prev) => !prev);
   };
+
+  useEffect(() => {
+    if (!clerkId) return;
+
+    const getUser = async () => {
+      try {
+        const response = await fetch(`/api/users/${clerkId}`);
+        const user: User = (await response.json()) as User;
+        setUserId(user.id);
+      } catch (err) {
+        console.error("Error fetching user:", err);
+      }
+    };
+
+    getUser();
+  }, [clerkId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const awaitForSubmission = async () => {
+      try {
+        const result = await getOrCreateSubmission(userId);
+        setSubmission(result);
+      } catch (err) {
+        console.error("Error in getOrCreateSubmission:", err);
+      }
+    };
+
+    awaitForSubmission();
+  }, [userId]);
 
   useEffect(() => {
     if (toggleLearnMore && containerRef.current) {
@@ -99,6 +126,37 @@ export default function QuestionnairePage() {
   // Get current questions based on active tab
   const currentQuestions =
     activeTab === "physical" ? physicalQuestions : mentalQuestions;
+
+  const getOrCreateSubmission = async (userId: string): Promise<Submission> => {
+    if (!userId) throw new Error("userId is required");
+
+    try {
+      const res = await fetch(`/api/submissions/${userId}`);
+      if (res.ok) return await res.json();
+
+      if (res.status === 404) {
+        const createRes = await fetch(`/api/submissions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: userId }),
+        });
+
+        if (!createRes.ok) {
+          const err = await createRes.json();
+          throw new Error(err.error || "Failed to create submission");
+        }
+
+        return await createRes.json();
+      }
+
+      // Unexpected error
+      const err = await res.json();
+      throw new Error(err.error || "Failed to fetch submission");
+    } catch (err) {
+      console.error("getOrCreateSubmission error:", err);
+      throw err;
+    }
+  };
 
   const handleAnswerChange = (
     questionId: string,
