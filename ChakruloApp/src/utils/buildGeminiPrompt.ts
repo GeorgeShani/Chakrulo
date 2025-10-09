@@ -2,8 +2,8 @@ import { PHYSICAL_HEALTH_SCORE, MENTAL_HEALTH_SCORE } from "@/constants";
 import { SimplifiedQuestion } from "@/types/simplified-question";
 
 export function buildGeminiPrompt(
-  questions: SimplifiedQuestion[],
-  category: "physical" | "mental"
+  category: "physical" | "mental",
+  questions: SimplifiedQuestion[]
 ) {
   const categoryDetails =
     category === "physical"
