@@ -61,7 +61,7 @@ export default function Dashboard() {
     if (!userId) throw new Error("userId is required");
 
     try {
-      const res = await fetch(`/api/submissions/${userId}`);
+      const res = await fetch(`/api/submissions/${userId}/completed`);
       if (res.ok) return await res.json();
 
       if (res.status === 404) {
