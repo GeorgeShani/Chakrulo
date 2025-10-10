@@ -23,3 +23,12 @@ export interface ResponseOption {
   option_text: string;
   option_value: number;
 }
+
+export interface QuestionnaireResponse {
+  questionId: string;
+  questionText: string;
+  selectedOptionId: string;
+  selectedOptionText: string;
+  selectedOptionValue: number;
+  uploadedFile?: File;
+}
