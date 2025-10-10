@@ -226,58 +226,29 @@ export default function QuestionnairePage() {
   const getOrCreateSubmission = async (userId: string): Promise<Submission> => {
     if (!userId) throw new Error("userId is required");
 
-    try {
-      const res = await fetch(`/api/submissions/${userId}`);
-      if (res.ok) {
-        const submission: Submission = await res.json();
+    // First, try to get existing in-progress submission
+    const res = await fetch(`/api/submissions/${userId}`);
+    if (res.ok) return await res.json();
+    
+    // If no in-progress submission exists (404), create a new one
+    if (res.status === 404) {
+      const createRes = await fetch(`/api/submissions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
 
-        // Check if the submission is completed
-        if (submission.status === "completed") {
-          console.log(
-            "Existing submission is completed, creating new submission"
-          );
-
-          // Create a new submission since the existing one is completed
-          const createRes = await fetch(`/api/submissions`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: userId }),
-          });
-
-          if (!createRes.ok) {
-            const err = await createRes.json();
-            throw new Error(err.error || "Failed to create new submission");
-          }
-
-          return await createRes.json();
-        }
-
-        // Return the existing in-progress submission
-        return submission;
+      if (!createRes.ok) {
+        const error = await createRes.json();
+        throw new Error(error.error || "Failed to create submission");
       }
 
-      if (res.status === 404) {
-        const createRes = await fetch(`/api/submissions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId }),
-        });
-
-        if (!createRes.ok) {
-          const err = await createRes.json();
-          throw new Error(err.error || "Failed to create submission");
-        }
-
-        return await createRes.json();
-      }
-
-      // Unexpected error
-      const err = await res.json();
-      throw new Error(err.error || "Failed to fetch submission");
-    } catch (err) {
-      console.error("getOrCreateSubmission error:", err);
-      throw err;
+      return await createRes.json();
     }
+
+    // Handle other errors
+    const error = await res.json();
+    throw new Error(error.error || "Failed to fetch submission");
   };
 
   const buildGeminiPromptFromResponses = (
