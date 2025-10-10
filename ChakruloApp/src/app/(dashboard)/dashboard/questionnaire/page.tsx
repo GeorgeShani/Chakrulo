@@ -228,7 +228,33 @@ export default function QuestionnairePage() {
 
     try {
       const res = await fetch(`/api/submissions/${userId}`);
-      if (res.ok) return await res.json();
+      if (res.ok) {
+        const submission: Submission = await res.json();
+
+        // Check if the submission is completed
+        if (submission.status === "completed") {
+          console.log(
+            "Existing submission is completed, creating new submission"
+          );
+
+          // Create a new submission since the existing one is completed
+          const createRes = await fetch(`/api/submissions`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: userId }),
+          });
+
+          if (!createRes.ok) {
+            const err = await createRes.json();
+            throw new Error(err.error || "Failed to create new submission");
+          }
+
+          return await createRes.json();
+        }
+
+        // Return the existing in-progress submission
+        return submission;
+      }
 
       if (res.status === 404) {
         const createRes = await fetch(`/api/submissions`, {
@@ -475,6 +501,67 @@ export default function QuestionnairePage() {
     }
   };
 
+  const saveResponsesSilently = async (): Promise<void> => {
+    if (!submission) {
+      throw new Error("No submission found. Please try again.");
+    }
+
+    // Save all responses (both physical and mental)
+    const allResponses = [...physicalResponses, ...mentalResponses];
+
+    for (const response of allResponses) {
+      // First, handle file upload if there's an uploaded file
+      let uploadedFileUrl: string | null = null;
+
+      if (response.uploadedFile) {
+        const formData = new FormData();
+        formData.append("submission_id", submission.id);
+        formData.append("question_id", response.questionId);
+        formData.append("response_option_id", response.selectedOptionId);
+        formData.append("uploaded_file", response.uploadedFile);
+
+        const uploadResponse = await fetch(
+          "/api/submissions/responses/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json();
+          uploadedFileUrl = uploadResult.uploadedFileUrl;
+        } else {
+          console.error(
+            "Failed to upload file for question:",
+            response.questionId
+          );
+        }
+      }
+
+      // Save the response
+      const responseData = {
+        submission_id: submission.id,
+        question_id: response.questionId,
+        response_option_id: response.selectedOptionId,
+        uploaded_file_url: uploadedFileUrl,
+      };
+
+      const saveResponse = await fetch("/api/submissions/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(responseData),
+      });
+
+      if (!saveResponse.ok) {
+        const errorData = await saveResponse.json();
+        throw new Error(errorData.error || "Failed to save response");
+      }
+    }
+  };
+
   const moveToMentalQuestions = () => {
     setActiveTab("mental");
   };
@@ -495,8 +582,8 @@ export default function QuestionnairePage() {
     try {
       setIsSubmitting(true);
 
-      // First save all responses
-      await saveQuestionnaireResults();
+      // Save all responses silently (without user alerts)
+      await saveResponsesSilently();
 
       // Generate AI recommendations and scores using Gemini
       let physicalRecommendations: string[] = [];
