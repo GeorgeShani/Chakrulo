@@ -31,10 +31,11 @@ export async function createSubmission(
 }
 
 export async function getLatestSubmission(
-  userId: string
+  userId: string,
+  includeCompleted: boolean = false
 ): Promise<Submission | null> {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from("submissions")
       .select(`
         id,
@@ -63,7 +64,17 @@ export async function getLatestSubmission(
           )
         )
       `)
-      .eq("user_id", userId)
+      .eq("user_id", userId);
+
+    // If includeCompleted is true, only get completed submissions
+    // If includeCompleted is false, only get submissions that are not completed
+    if (includeCompleted) {
+      query = query.not("completed_at", "is", null);
+    } else {
+      query = query.is("completed_at", null);
+    }
+
+    const { data, error } = await query
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -143,7 +154,8 @@ export async function updateLatestSubmission(
 
     const { data, error: fetchUpdatedError } = await supabase
       .from("submissions")
-      .select(`
+      .select(
+        `
         id,
         user_id,
         started_at,
@@ -169,12 +181,15 @@ export async function updateLatestSubmission(
             option_value
           )
         )
-      `)
+      `
+      )
       .eq("id", latest.id)
       .maybeSingle();
 
     if (fetchUpdatedError) {
-      throw new Error(`Error fetching updated submission: ${fetchUpdatedError.message}`);
+      throw new Error(
+        `Error fetching updated submission: ${fetchUpdatedError.message}`
+      );
     }
 
     if (!data) {
@@ -212,7 +227,3 @@ export async function updateLatestSubmission(
     throw error;
   }
 }
-
-
-
-
