@@ -1,38 +1,32 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Question } from "@/types/supabase/questions";
+import { Question, QuestionnaireResponse } from "@/types/supabase/questions";
 import { Submission } from "@/types/supabase/submission";
 import { User } from "@/types/supabase/user";
 import { useAuth } from "@clerk/nextjs";
+import {
+  buildGeminiPrompt,
+  calculateReadinessScore,
+  calculateOverallReadinessScore,
+  formatRecommendations,
+} from "@/utils";
 
 type TabType = "physical" | "mental";
-
-interface QuestionnaireResponse {
-  questionId: string;
-  selectedOptionId: string;
-  selectedOptionValue: number;
-  uploadedFile?: {
-    name: string;
-    size: number;
-    type: string;
-  };
-}
-
-interface SavedQuestionnaire {
-  timestamp: string;
-  physicalResponses: QuestionnaireResponse[];
-  mentalResponses: QuestionnaireResponse[];
-  uploadedFiles: { [key: string]: File };
-}
 
 export default function QuestionnairePage() {
   const [activeTab, setActiveTab] = useState<TabType>("physical");
   const [physicalQuestions, setPhysicalQuestions] = useState<Question[]>([]);
   const [mentalQuestions, setMentalQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
-  const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean; }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>(
+    {}
+  );
+  const [expandedQuestions, setExpandedQuestions] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [importantNotePopup, setImportantNotePopup] = useState<boolean>(true);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const [submission, setSubmission] = useState<Submission | null>(null);
@@ -40,9 +34,15 @@ export default function QuestionnairePage() {
   const { userId: clerkId } = useAuth();
 
   // Store responses for each tab
-  const [physicalResponses, setPhysicalResponses] = useState<QuestionnaireResponse[]>([]);
-  const [mentalResponses, setMentalResponses] = useState<QuestionnaireResponse[]>([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string; }>({});
+  const [physicalResponses, setPhysicalResponses] = useState<
+    QuestionnaireResponse[]
+  >([]);
+  const [mentalResponses, setMentalResponses] = useState<
+    QuestionnaireResponse[]
+  >([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [key: string]: string;
+  }>({});
 
   const [toggleLearnMore, setToggleLearnMore] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -82,6 +82,88 @@ export default function QuestionnairePage() {
     awaitForSubmission();
   }, [userId]);
 
+  // Load saved responses when submission is available
+  useEffect(() => {
+    if (
+      !submission ||
+      !submission.responses ||
+      submission.responses.length === 0
+    )
+      return;
+
+    const loadSavedResponses = async () => {
+      try {
+        // Separate responses by question type
+        const physicalResponses: QuestionnaireResponse[] = [];
+        const mentalResponses: QuestionnaireResponse[] = [];
+        const newSelectedAnswers: { [key: string]: string } = {};
+        const newUploadedFiles: { [key: string]: File } = {};
+
+        // Process responses and load files
+        for (const response of submission.responses) {
+          let uploadedFile: File | undefined = undefined;
+
+          // Load file if URL exists
+          if (response.uploaded_file_url) {
+            const file = await loadFileFromUrl(
+              response.uploaded_file_url,
+              response.question_id
+            );
+            if (file) {
+              uploadedFile = file;
+              newUploadedFiles[response.question_id] = file;
+            }
+          }
+
+          const questionnaireResponse: QuestionnaireResponse = {
+            questionId: response.question_id,
+            questionText: response.question_text,
+            selectedOptionId: response.response_option_id,
+            selectedOptionText: response.response_option_text,
+            selectedOptionValue: parseFloat(response.response_option_value),
+            uploadedFile,
+          };
+
+          // Determine if it's physical or mental based on question type
+          if (
+            response.question_type ===
+            "💪 Physical Health & Functional Capacity"
+          ) {
+            physicalResponses.push(questionnaireResponse);
+          } else if (
+            response.question_type === "🧠 Mental Health & Cognitive Readiness"
+          ) {
+            mentalResponses.push(questionnaireResponse);
+          }
+
+          // Set selected answers for radio buttons
+          newSelectedAnswers[response.question_id] =
+            response.response_option_id;
+        }
+
+        // Update state with loaded responses
+        setPhysicalResponses(physicalResponses);
+        setMentalResponses(mentalResponses);
+        setSelectedAnswers(newSelectedAnswers);
+        setUploadedFiles(newUploadedFiles);
+
+        console.log("Loaded saved responses:", {
+          physical: physicalResponses.length,
+          mental: mentalResponses.length,
+          total: submission.responses.length,
+          files: Object.keys(newUploadedFiles).length,
+        });
+      } catch (error) {
+        console.error("Error loading saved responses:", error);
+      } finally {
+        // Turn off loading after all saved responses are processed (or failed)
+        setIsLoading(false);
+      }
+    };
+
+    loadSavedResponses();
+  }, [submission]);
+
   useEffect(() => {
     if (toggleLearnMore && containerRef.current) {
       containerRef.current.scrollTo({
@@ -115,13 +197,27 @@ export default function QuestionnairePage() {
       } catch (error) {
         console.error("Error fetching questions:", error);
         setError("Failed to load questions. Please try again.");
-      } finally {
         setIsLoading(false);
       }
     };
 
     getAllQuestions();
   }, []);
+
+  // Turn off loading only after questions are loaded and saved responses are processed
+  useEffect(() => {
+    if (
+      physicalQuestions.length > 0 &&
+      mentalQuestions.length > 0 &&
+      submission
+    ) {
+      // If there are no saved responses, turn off loading immediately
+      if (!submission.responses || submission.responses.length === 0) {
+        setIsLoading(false);
+      }
+      // If there are saved responses, loading will be turned off in the loadSavedResponses function
+    }
+  }, [physicalQuestions, mentalQuestions, submission]);
 
   // Get current questions based on active tab
   const currentQuestions =
@@ -158,9 +254,36 @@ export default function QuestionnairePage() {
     }
   };
 
+  const buildGeminiPromptFromResponses = (
+    category: "physical" | "mental"
+  ): string => {
+    const responses =
+      category === "physical" ? physicalResponses : mentalResponses;
+    const questions =
+      category === "physical" ? physicalQuestions : mentalQuestions;
+
+    if (responses.length === 0) {
+      throw new Error(`No ${category} responses available`);
+    }
+
+    const simplifiedQuestions = responses.map((response) => {
+      const question = questions.find((q) => q.id === response.questionId);
+      return {
+        domain: question?.domain || "Unknown",
+        question: response.questionText,
+        answer: response.selectedOptionText,
+        score: response.selectedOptionValue,
+      };
+    });
+
+    return buildGeminiPrompt(category, simplifiedQuestions);
+  };
+
   const handleAnswerChange = (
     questionId: string,
+    questionText: string,
     optionId: string,
+    optionText: string,
     optionValue: number
   ) => {
     setSelectedAnswers((prev) => ({
@@ -170,15 +293,11 @@ export default function QuestionnairePage() {
 
     const response: QuestionnaireResponse = {
       questionId,
+      questionText,
       selectedOptionId: optionId,
+      selectedOptionText: optionText,
       selectedOptionValue: optionValue,
-      uploadedFile: uploadedFiles[questionId]
-        ? {
-            name: uploadedFiles[questionId].name,
-            size: uploadedFiles[questionId].size,
-            type: uploadedFiles[questionId].type,
-          }
-        : undefined,
+      uploadedFile: uploadedFiles[questionId],
     };
 
     if (activeTab === "physical") {
@@ -215,11 +334,7 @@ export default function QuestionnairePage() {
     if (existingResponse) {
       const updatedResponse = {
         ...existingResponse,
-        uploadedFile: {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-        },
+        uploadedFile: file,
       };
 
       if (activeTab === "physical") {
@@ -278,31 +393,89 @@ export default function QuestionnairePage() {
   };
 
   const saveQuestionnaireResults = async () => {
-    const savedData: SavedQuestionnaire = {
-      timestamp: new Date().toISOString(),
-      physicalResponses,
-      mentalResponses,
-      uploadedFiles,
-    };
+    if (!submission) {
+      alert("No submission found. Please try again.");
+      return;
+    }
 
-    // Log the data to console for now
-    console.log("Saved Questionnaire Data:", savedData);
-    console.log("Physical Responses Count:", physicalResponses.length);
-    console.log("Mental Responses Count:", mentalResponses.length);
-    console.log("Total Uploaded Files:", Object.keys(uploadedFiles).length);
+    try {
+      setIsSaving(true);
 
-    alert(
-      `Questionnaire saved locally!\n\nPhysical: ${
-        physicalResponses.length
-      } responses\nMental: ${mentalResponses.length} responses\nFiles: ${
-        Object.keys(uploadedFiles).length
-      }\n\nCheck console for details.`
-    );
+      // Save all responses (both physical and mental)
+      const allResponses = [...physicalResponses, ...mentalResponses];
+
+      for (const response of allResponses) {
+        // First, handle file upload if there's an uploaded file
+        let uploadedFileUrl: string | null = null;
+
+        if (response.uploadedFile) {
+          const formData = new FormData();
+          formData.append("submission_id", submission.id);
+          formData.append("question_id", response.questionId);
+          formData.append("response_option_id", response.selectedOptionId);
+          formData.append("uploaded_file", response.uploadedFile);
+
+          const uploadResponse = await fetch(
+            "/api/submissions/responses/upload",
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
+
+          if (uploadResponse.ok) {
+            const uploadResult = await uploadResponse.json();
+            uploadedFileUrl = uploadResult.uploadedFileUrl;
+          } else {
+            console.error(
+              "Failed to upload file for question:",
+              response.questionId
+            );
+          }
+        }
+
+        // Save the response
+        const responseData = {
+          submission_id: submission.id,
+          question_id: response.questionId,
+          response_option_id: response.selectedOptionId,
+          uploaded_file_url: uploadedFileUrl,
+        };
+
+        const saveResponse = await fetch("/api/submissions/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(responseData),
+        });
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json();
+          throw new Error(errorData.error || "Failed to save response");
+        }
+      }
+
+      alert(
+        `Questionnaire saved successfully!\n\nPhysical: ${
+          physicalResponses.length
+        } responses\nMental: ${mentalResponses.length} responses\nFiles: ${
+          Object.keys(uploadedFiles).length
+        }`
+      );
+    } catch (error) {
+      console.error("Error saving questionnaire:", error);
+      alert(
+        `Failed to save questionnaire: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const moveToMentalQuestions = () => {
-    // Simply switch tabs - all data is preserved
-    console.log("Physical Health Responses:", physicalResponses);
     setActiveTab("mental");
   };
 
@@ -314,28 +487,139 @@ export default function QuestionnairePage() {
       return;
     }
 
-    const finalData: SavedQuestionnaire = {
-      timestamp: new Date().toISOString(),
-      physicalResponses,
-      mentalResponses,
-      uploadedFiles,
-    };
+    if (!submission) {
+      alert("No submission found. Please try again.");
+      return;
+    }
 
-    // Calculate a simple readiness score (average of all responses)
-    const allValues = [
-      ...physicalResponses.map((r) => r.selectedOptionValue),
-      ...mentalResponses.map((r) => r.selectedOptionValue),
-    ];
-    const averageScore =
-      allValues.reduce((sum, val) => sum + val, 0) / allValues.length;
-    const readinessScore = Math.round(averageScore * 100) / 100;
+    try {
+      setIsSubmitting(true);
 
-    console.log("Final Questionnaire Submission:", finalData);
-    console.log("Readiness Score:", readinessScore);
+      // First save all responses
+      await saveQuestionnaireResults();
 
-    alert(
-      `Questionnaire submitted!\n\nTotal Responses: ${totalResponses}\nReadiness Score: ${readinessScore}\n\nCheck console for full details.`
-    );
+      // Generate AI recommendations and scores using Gemini
+      let physicalRecommendations: string[] = [];
+      let mentalRecommendations: string[] = [];
+      let physicalScore = 0;
+      let mentalScore = 0;
+
+      try {
+        // Generate physical health recommendations
+        if (physicalResponses.length > 0) {
+          const physicalPrompt = buildGeminiPromptFromResponses("physical");
+          const physicalResponse = await fetch("/api/gemini", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ prompt: physicalPrompt }),
+          });
+
+          if (physicalResponse.ok) {
+            const physicalData = await physicalResponse.json();
+            physicalRecommendations = formatRecommendations(physicalData.text);
+            physicalScore = calculateReadinessScore(
+              "physical",
+              physicalResponses
+            );
+          }
+        }
+
+        // Generate mental health recommendations
+        if (mentalResponses.length > 0) {
+          const mentalPrompt = buildGeminiPromptFromResponses("mental");
+          const mentalResponse = await fetch("/api/gemini", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ prompt: mentalPrompt }),
+          });
+
+          if (mentalResponse.ok) {
+            const mentalData = await mentalResponse.json();
+            mentalRecommendations = formatRecommendations(mentalData.text);
+            mentalScore = calculateReadinessScore("mental", mentalResponses);
+          }
+        }
+      } catch (aiError) {
+        console.error("Error generating AI recommendations:", aiError);
+        // Fallback to simple calculation if AI fails
+        physicalScore = calculateReadinessScore("physical", physicalResponses);
+        mentalScore = calculateReadinessScore("mental", mentalResponses);
+        physicalRecommendations = [
+          "Please consult with a healthcare professional for personalized recommendations.",
+        ];
+        mentalRecommendations = [
+          "Please consult with a mental health professional for personalized recommendations.",
+        ];
+      }
+
+      // Calculate overall readiness score
+      const overallScore = calculateOverallReadinessScore(
+        physicalScore,
+        mentalScore
+      );
+
+      // Update submission with scores and recommendations
+      const updateData = {
+        completed_at: new Date().toISOString(),
+        status: "completed" as const,
+        physical_health_score: physicalScore,
+        mental_health_score: mentalScore,
+        overall_readiness_score: overallScore,
+        physical_health_recommendations: physicalRecommendations,
+        mental_health_recommendations: mentalRecommendations,
+      };
+
+      const updateResponse = await fetch(`/api/submissions/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.error || "Failed to update submission");
+      }
+
+      alert(
+        `Questionnaire submitted successfully!\nYou can now view your readiness score and recommendations.`
+      );
+
+      // Redirect to readiness score page
+      window.location.href = "/dashboard/readiness-score";
+    } catch (error) {
+      console.error("Error submitting questionnaire:", error);
+      alert(
+        `Failed to submit questionnaire: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadFileFromUrl = async (
+    url: string,
+    questionId: string
+  ): Promise<File | null> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) return null;
+
+      const blob = await response.blob();
+      const fileName = url.split("/").pop() || `file_${questionId}`;
+
+      return new File([blob], fileName, { type: blob.type });
+    } catch (error) {
+      console.error("Error loading file:", error);
+      return null;
+    }
   };
 
   if (importantNotePopup) {
@@ -542,7 +826,9 @@ export default function QuestionnairePage() {
                             onChange={() =>
                               handleAnswerChange(
                                 question.id,
+                                question.question_text,
                                 option.id,
+                                option.option_text,
                                 option.option_value
                               )
                             }
@@ -724,17 +1010,22 @@ export default function QuestionnairePage() {
           <button
             disabled={
               isLoading ||
+              isSaving ||
+              isSubmitting ||
               (physicalQuestions.length === 0 && mentalQuestions.length === 0)
             }
             onClick={saveQuestionnaireResults}
-            className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
+            {isSaving && (
+              <div className="w-5 h-5 border-2 border-[#290D55] border-t-transparent rounded-full animate-spin"></div>
+            )}
             Finish my questionnaire here and save my responses
           </button>
           {activeTab === "physical" && (
             <button
               onClick={moveToMentalQuestions}
-              disabled={isLoading}
+              disabled={isLoading || isSaving || isSubmitting}
               className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Move to mental readiness
@@ -744,11 +1035,16 @@ export default function QuestionnairePage() {
             <button
               disabled={
                 isLoading ||
+                isSaving ||
+                isSubmitting ||
                 (physicalQuestions.length === 0 && mentalQuestions.length === 0)
               }
               onClick={submitQuestionnaire}
-              className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#EDE2FF91] hover:bg-[#ede2ff5f] transition-all duration-300 ease-in-out rounded-2xl text-[#290D55] text-xl py-1 px-4 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
+              {isSubmitting && (
+                <div className="w-5 h-5 border-2 border-[#290D55] border-t-transparent rounded-full animate-spin"></div>
+              )}
               Calculate my readiness score
             </button>
           )}
