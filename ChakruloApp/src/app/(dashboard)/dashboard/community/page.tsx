@@ -4,7 +4,7 @@ import React from "react";
 
 export default function NasaCommunityPage() {
   const navigateToDiscord = () => {
-    window.open("https://discord.gg/Wjj9MKAP", "_blank");
+    window.open("https://discord.gg/dVYCd46GXD", "_blank");
   };
   
   return (
