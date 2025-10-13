@@ -1,9 +1,14 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Question, QuestionnaireResponse } from "@/types/supabase/questions";
 import { Submission } from "@/types/supabase/submission";
 import { User } from "@/types/supabase/user";
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import {
+  Question,
+  QuestionnaireResponse,
+  QuestionType,
+} from "@/types/supabase/questions";
 import {
   buildGeminiPrompt,
   calculateReadinessScore,
@@ -21,12 +26,8 @@ export default function QuestionnairePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>(
-    {}
-  );
-  const [expandedQuestions, setExpandedQuestions] = useState<{
-    [key: string]: boolean;
-  }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File }>({});
+  const [expandedQuestions, setExpandedQuestions] = useState<{ [key: string]: boolean; }>({});
   const [importantNotePopup, setImportantNotePopup] = useState<boolean>(true);
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
   const [submission, setSubmission] = useState<Submission | null>(null);
@@ -34,18 +35,14 @@ export default function QuestionnairePage() {
   const { userId: clerkId } = useAuth();
 
   // Store responses for each tab
-  const [physicalResponses, setPhysicalResponses] = useState<
-    QuestionnaireResponse[]
-  >([]);
-  const [mentalResponses, setMentalResponses] = useState<
-    QuestionnaireResponse[]
-  >([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<{
-    [key: string]: string;
-  }>({});
+  const [physicalResponses, setPhysicalResponses] = useState<QuestionnaireResponse[]>([]);
+  const [mentalResponses, setMentalResponses] = useState<QuestionnaireResponse[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string; }>({});
 
   const [toggleLearnMore, setToggleLearnMore] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const router = useRouter();
 
   const toggleLearnMoreVoid = () => {
     setToggleLearnMore((prev) => !prev);
@@ -125,14 +122,9 @@ export default function QuestionnairePage() {
           };
 
           // Determine if it's physical or mental based on question type
-          if (
-            response.question_type ===
-            "💪 Physical Health & Functional Capacity"
-          ) {
+          if (response.question_type === QuestionType.PhysicalHealth) {
             physicalResponses.push(questionnaireResponse);
-          } else if (
-            response.question_type === "🧠 Mental Health & Cognitive Readiness"
-          ) {
+          } else if (response.question_type === QuestionType.MentalHealth) {
             mentalResponses.push(questionnaireResponse);
           }
 
@@ -229,7 +221,7 @@ export default function QuestionnairePage() {
     // First, try to get existing in-progress submission
     const res = await fetch(`/api/submissions/${userId}`);
     if (res.ok) return await res.json();
-    
+
     // If no in-progress submission exists (404), create a new one
     if (res.status === 404) {
       const createRes = await fetch(`/api/submissions`, {
@@ -254,10 +246,8 @@ export default function QuestionnairePage() {
   const buildGeminiPromptFromResponses = (
     category: "physical" | "mental"
   ): string => {
-    const responses =
-      category === "physical" ? physicalResponses : mentalResponses;
-    const questions =
-      category === "physical" ? physicalQuestions : mentalQuestions;
+    const responses = category === "physical" ? physicalResponses : mentalResponses;
+    const questions = category === "physical" ? physicalQuestions : mentalQuestions;
 
     if (responses.length === 0) {
       throw new Error(`No ${category} responses available`);
@@ -322,8 +312,7 @@ export default function QuestionnairePage() {
     }));
 
     // Update the response with file info
-    const currentResponses =
-      activeTab === "physical" ? physicalResponses : mentalResponses;
+    const currentResponses = activeTab === "physical" ? physicalResponses : mentalResponses;
     const existingResponse = currentResponses.find(
       (r) => r.questionId === questionId
     );
@@ -398,60 +387,7 @@ export default function QuestionnairePage() {
     try {
       setIsSaving(true);
 
-      // Save all responses (both physical and mental)
-      const allResponses = [...physicalResponses, ...mentalResponses];
-
-      for (const response of allResponses) {
-        // First, handle file upload if there's an uploaded file
-        let uploadedFileUrl: string | null = null;
-
-        if (response.uploadedFile) {
-          const formData = new FormData();
-          formData.append("submission_id", submission.id);
-          formData.append("question_id", response.questionId);
-          formData.append("response_option_id", response.selectedOptionId);
-          formData.append("uploaded_file", response.uploadedFile);
-
-          const uploadResponse = await fetch(
-            "/api/submissions/responses/upload",
-            {
-              method: "POST",
-              body: formData,
-            }
-          );
-
-          if (uploadResponse.ok) {
-            const uploadResult = await uploadResponse.json();
-            uploadedFileUrl = uploadResult.uploadedFileUrl;
-          } else {
-            console.error(
-              "Failed to upload file for question:",
-              response.questionId
-            );
-          }
-        }
-
-        // Save the response
-        const responseData = {
-          submission_id: submission.id,
-          question_id: response.questionId,
-          response_option_id: response.selectedOptionId,
-          uploaded_file_url: uploadedFileUrl,
-        };
-
-        const saveResponse = await fetch("/api/submissions/responses", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(responseData),
-        });
-
-        if (!saveResponse.ok) {
-          const errorData = await saveResponse.json();
-          throw new Error(errorData.error || "Failed to save response");
-        }
-      }
+      await saveResponsesSilently();
 
       alert(
         `Questionnaire saved successfully!\n\nPhysical: ${
@@ -649,7 +585,7 @@ export default function QuestionnairePage() {
       );
 
       // Redirect to readiness score page
-      window.location.href = "/dashboard/readiness-score";
+      router.push("/dashboard/readiness-score");
     } catch (error) {
       console.error("Error submitting questionnaire:", error);
       alert(
