@@ -14,7 +14,6 @@ export default function Dashboard() {
   const { userId: clerkId } = useAuth();
 
   const tabs = ["Moon", "Mars", "Microgravity", "Space Radiation"];
-  const progress: number = 73;
 
   const exploreMore = () => {
     window.open(
